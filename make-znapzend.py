@@ -99,14 +99,14 @@ def run_command(*args, **kwargs):
             sys.stderr.write(ln)
 
 
-def mkdirp(directory):
+def mkdirp(directory,perms=0o0700):
     d = os.path.abspath(directory)
     try:
-        os.makedirs(d, 0o0700)
+        os.makedirs(d, perms)
     except OSError as e:
         if e.errno == 17:  # Directory exists
             os.chown(d, os.getuid(), os.getgid())
-            os.chmod(d, 0o0700)
+            os.chmod(d, perms)
         else:
             raise
     return d
@@ -139,8 +139,12 @@ build_dir = mkdirp(build_dir)
 
 with cd(build_dir) as (prevdir, curdir):
     zz_dir = clone_and_checkout(ZZ_URL)
-    shutil.copytree(os.path.join(prevdir, 'debian'), os.path.join(zz_dir, 'debian'))
     zz_dir = os.path.abspath(zz_dir)
+
+
+shutil.copytree(os.path.abspath('debian'), os.path.join(zz_dir, 'debian'))
+mkdirp(os.path.join(zz_dir,'etc/znapzend'),0o755)
+shutil.copy2('znapzend.conf',os.path.join(zz_dir,'etc/znapzend'))
 
 with cd(zz_dir):
     run_command('./configure')
