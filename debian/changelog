@@ -1,6 +1,6 @@
-znapzend (0.17.0-1~ppa1) xenial; urgency=medium
+znapzend (0.17.0-1+ppa1) xenial; urgency=medium
 
-  * PPA Build
+  * Initial PPA Build
   *
 
  -- Daniel Sullivan <mumblepins@gmail.com>  Sat, 26 Aug 2017 13:11:57 -0500

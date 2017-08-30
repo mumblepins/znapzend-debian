@@ -1,0 +1,19 @@
+defaults: &defaults
+  working_directory: /tmp/build
+#  parallelism: 4
+  docker:
+    - image: mumblepins/circleci-dev:xenial-debuild
+
+version: 2
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+#      - setup_remote_docker
+      - run:
+          name: Build
+          command: |
+            ./make-znapzend.py
+#      - store_artifacts:
+#          path: workspace
