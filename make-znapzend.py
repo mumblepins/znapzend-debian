@@ -165,7 +165,7 @@ with cd(zz_dir):
     os.remove('thirdparty/Makefile')
     run_command('automake')
 
-    cmd = "debuild --no-tgz-check -S  -p'gpg --no-tty --passphrase {}'".format(os.environ['SIGN_PASSWORD'])
+    cmd = "debuild --no-tgz-check -p'gpg --no-tty --passphrase {}'".format(os.environ['SIGN_PASSWORD'])
     for typ, line in run_command_iter(cmd, env=environment, shell=True, echo=False):
         if 'signfile' in line and '.changes' in line:
             sys.stdout.write(BLUE)
