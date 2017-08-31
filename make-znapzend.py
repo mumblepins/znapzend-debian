@@ -39,7 +39,11 @@ savedir = os.path.join(os.getcwd(), 'worksavedir')
 
 
 def eprint(*args, **kwargs):
+    if 'colored' not in kwargs or kwargs['colored']:
+        sys.stderr.write(RED)
     print(*args, file=sys.stderr, **kwargs)
+    if 'colored' not in kwargs or kwargs['colored']:
+        sys.stderr.write(RESET)
 
 
 @contextmanager
@@ -93,6 +97,13 @@ def run_command_iter(string, echo=True, quiet=False, dry_run=False, colored=True
                     # sys.stderr.write(RESET)
 
 
+def run_command_check_output(*args, **kwargs):
+    # kwargs['quiet'] = False
+    # rci = run_command_iter(*args, **kwargs)
+    outlist =[v.rstrip('\n') for  t, v in run_command_iter(*args, **kwargs) if t=='stdout']
+    return '\n'.join(outlist)
+
+
 def run_command(*args, **kwargs):
     for t, ln in run_command_iter(*args, **kwargs):
         if t == 'stdout':
@@ -134,12 +145,21 @@ def clone_and_checkout(url, branch=None, gitdir=None):
     return gitdir
 
 
+def sed_file(regex_find, regex_sub, filename):
+    with open(filename, "r") as fh:
+        lines = fh.readlines()
+    with open(filename, "w") as fh:
+        for line in lines:
+            fh.write(re.sub(regex_find, regex_sub, line))
+
+
 mkdirp(savedir)
 
 run_command('curl -SlL {} | gpg --import'.format(os.environ['SIGN_URI']), echo=False, quiet=True, shell=True)
 
 clean(build_dir)
 build_dir = mkdirp(build_dir)
+
 
 with cd(build_dir) as (prevdir, curdir):
     zz_dir = clone_and_checkout(ZZ_URL)
@@ -148,6 +168,10 @@ with cd(build_dir) as (prevdir, curdir):
 shutil.copytree(os.path.abspath('debian'), os.path.join(zz_dir, 'debian'))
 mkdirp(os.path.join(zz_dir, 'etc/znapzend'), 0o755)
 shutil.copy2('override.conf', os.path.abspath(zz_dir))
+
+sed_file(r' UBUNTU_RELEASE;',
+         ' {};'.format(run_command_check_output('lsb_release -c -s')),
+         os.path.join(zz_dir, 'debian/changelog'))
 
 with cd(zz_dir) as (prevdir, curdir):
     run_command('./configure')
