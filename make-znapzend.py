@@ -167,12 +167,15 @@ def sed_file(regex_find, regex_sub, filename, first_line_only=False):
 
 
 def currentppabuild(ppa_name):
-    username, ppa = ppa_name.split('/', 1)
-    url = 'https://api.launchpad.net/1.0/~{}/+archive/ubuntu/{}?ws.op=getPublishedBinaries&status=Published&binary_name=znapzend'.format(
-        username, ppa)
-    version = str(requests.get(url).json()['entries'][0]['binary_package_version'])
-    ppa = re.search(r'[0-9\.\-+~]*ppa([0-9]*)', version).groups()[0]
-    return int(ppa)
+    try:
+        username, ppa = ppa_name.split('/', 1)
+        url = 'https://api.launchpad.net/1.0/~{}/+archive/ubuntu/{}?ws.op=getPublishedBinaries&status=Published&binary_name=znapzend'.format(
+            username, ppa)
+        version = str(requests.get(url).json()['entries'][0]['binary_package_version'])
+        ppa = re.search(r'[0-9\.\-+~]*ppa([0-9]*)', version).groups()[0]
+        return int(ppa)
+    except:
+        return -100
 
 
 mkdirp(savedir)
