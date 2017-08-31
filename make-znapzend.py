@@ -35,6 +35,8 @@ RESET = "\033[0;0m"
 current_branch = check_output(shlex.split('git rev-parse --abbrev-ref HEAD')).strip()
 deploy = True if current_branch == 'master' else False
 
+savedir = os.path.join(os.getcwd(), 'worksavedir')
+
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -99,7 +101,7 @@ def run_command(*args, **kwargs):
             sys.stderr.write(ln)
 
 
-def mkdirp(directory,perms=0o0700):
+def mkdirp(directory, perms=0o0700):
     d = os.path.abspath(directory)
     try:
         os.makedirs(d, perms)
@@ -132,6 +134,8 @@ def clone_and_checkout(url, branch=None, gitdir=None):
     return gitdir
 
 
+mkdirp(savedir)
+
 run_command('curl -SlL {} | gpg --import'.format(os.environ['SIGN_URI']), echo=False, quiet=True, shell=True)
 
 clean(build_dir)
@@ -141,12 +145,11 @@ with cd(build_dir) as (prevdir, curdir):
     zz_dir = clone_and_checkout(ZZ_URL)
     zz_dir = os.path.abspath(zz_dir)
 
-
 shutil.copytree(os.path.abspath('debian'), os.path.join(zz_dir, 'debian'))
-mkdirp(os.path.join(zz_dir,'etc/znapzend'),0o755)
-shutil.copy2('znapzend.conf',os.path.join(zz_dir,'etc/znapzend'))
+mkdirp(os.path.join(zz_dir, 'etc/znapzend'), 0o755)
+shutil.copy2('override.conf', os.path.abspath(zz_dir))
 
-with cd(zz_dir):
+with cd(zz_dir) as (prevdir, curdir):
     run_command('./configure')
     run_command('make')
 
@@ -164,7 +167,11 @@ with cd(zz_dir):
 
     os.remove('thirdparty/Makefile')
     run_command('automake')
-    run_command('debuild --no-tgz-check -us -uc ')
+    run_command('debuild --no-tgz-check -us -uc')
+    run_command('tar cvf - ../*.* | lzma -9 -z - > {}'.format(os.path.join(savedir, 'znapzend_binary.tar.lzma')),
+                shell=True)
+
+    run_command('find ../ -maxdepth 1 -type f  -exec rm {} \; -print')
     cmd = "debuild --no-tgz-check -S -p'gpg --no-tty --passphrase {}'".format(os.environ['SIGN_PASSWORD'])
     for typ, line in run_command_iter(cmd, env=environment, shell=True, echo=False):
         if 'signfile' in line and '.changes' in line:
@@ -175,6 +182,9 @@ with cd(zz_dir):
         else:
             sys.stdout.write(line)
         sys.stdout.write(RESET)
+
+    run_command('tar cvf - ../*.* | lzma -9 -z - > {}'.format(os.path.join(savedir, 'znapzend_source.tar.lzma')),
+                shell=True)
 
 with cd(build_dir):
     if deploy:

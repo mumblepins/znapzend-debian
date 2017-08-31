@@ -10,10 +10,9 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-#      - setup_remote_docker
       - run:
           name: Build
           command: |
             ./make-znapzend.py
-#      - store_artifacts:
-#          path: workspace
+      - store_artifacts:
+          path: worksavedir

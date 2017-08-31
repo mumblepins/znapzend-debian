@@ -1,1 +1,1 @@
-etc/znapzend/znapzend.conf etc/znapzend/
+override.conf   etc/systemd/system/znapzend.service.d
