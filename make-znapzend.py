@@ -12,6 +12,8 @@ from contextlib import contextmanager
 from subprocess import check_output, Popen, PIPE
 from threading import Thread
 
+import requests
+
 USER_EMAIL = os.environ['USER_EMAIL']
 USER_NAME = os.environ['USER_NAME']
 PPA = os.environ['PPA']
@@ -148,12 +150,29 @@ def clone_and_checkout(url, branch=None, gitdir=None):
     return gitdir
 
 
-def sed_file(regex_find, regex_sub, filename):
+def sed_file(regex_find, regex_sub, filename, first_line_only=False):
     with open(filename, "r") as fh:
         lines = fh.readlines()
+    found = False
     with open(filename, "w") as fh:
         for line in lines:
-            fh.write(re.sub(regex_find, regex_sub, line))
+            if first_line_only and not found:
+                if re.search(regex_find, line):
+                    found = True
+                fh.write(re.sub(regex_find, regex_sub, line))
+            elif first_line_only and found:
+                fh.write(line)
+            else:
+                fh.write(re.sub(regex_find, regex_sub, line))
+
+
+def currentppabuild(ppa_name):
+    username, ppa = ppa_name.split('/', 1)
+    url = 'https://api.launchpad.net/1.0/~{}/+archive/ubuntu/{}?ws.op=getPublishedBinaries&status=Published&binary_name=znapzend'.format(
+        username, ppa)
+    version = str(requests.get(url).json()['entries'][0]['binary_package_version'])
+    ppa = re.search(r'[0-9\.\-+~]*ppa([0-9]*)', version).groups()[0]
+    return int(ppa)
 
 
 mkdirp(savedir)
@@ -165,6 +184,8 @@ mkdirp(savedir)
 #         'no-use-agent\n',
 #         'pinentry-mode loopback\n'
 #     ])
+
+
 
 run_command('curl -SlL {} | gpg --batch --import'.format(os.environ['SIGN_URI']), echo=False, quiet=True, shell=True)
 
@@ -178,10 +199,20 @@ with cd(build_dir) as (prevdir, curdir):
 shutil.copytree(os.path.abspath('debian'), os.path.join(zz_dir, 'debian'))
 mkdirp(os.path.join(zz_dir, 'etc/znapzend'), 0o755)
 shutil.copy2('override.conf', os.path.abspath(zz_dir))
+chlogfile = os.path.join(zz_dir, 'debian/changelog')
+sed_file(r'UBUNTU_RELEASE',
+         '{}'.format(run_command_check_output('lsb_release -c -s')),
+         chlogfile)
 
-sed_file(r' UBUNTU_RELEASE;',
-         ' {};'.format(run_command_check_output('lsb_release -c -s')),
-         os.path.join(zz_dir, 'debian/changelog'))
+if deploy:
+    listedppa = int(re.search('ppa([0-9]*)',
+                              '\n'.join(
+                                  open(chlogfile).readlines()
+                              )).groups()[0])
+    curppa = currentppabuild(PPA)
+
+    if curppa >= listedppa:
+        sed_file(r'ppa([0-9]*)', r'ppa{}'.format(curppa + 1), chlogfile, first_line_only=True)
 
 with cd(zz_dir) as (prevdir, curdir):
     run_command('./configure')
