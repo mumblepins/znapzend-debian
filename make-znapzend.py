@@ -223,7 +223,6 @@ with open(chlogfile) as fh:
     sys.stdout.writelines(fh.readlines())
 print('=======================================================')
 sys.stdout.write(RESET)
-sys.exit()
 
 with cd(zz_dir) as (prevdir, curdir):
     run_command('./configure')
