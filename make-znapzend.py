@@ -217,6 +217,14 @@ if deploy:
     if curppa >= listedppa:
         sed_file(r'ppa([0-9]*)', r'ppa{}'.format(curppa + 1), chlogfile, first_line_only=True)
 
+sys.stdout.write(BLUE)
+print('====================== CHANGELOG ======================')
+with open(chlogfile) as fh:
+    sys.stdout.writelines(fh.readlines())
+print('=======================================================')
+sys.stdout.write(RESET)
+sys.exit()
+
 with cd(zz_dir) as (prevdir, curdir):
     run_command('./configure')
     run_command('make')
