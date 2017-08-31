@@ -157,12 +157,14 @@ def sed_file(regex_find, regex_sub, filename):
 
 mkdirp(savedir)
 
-with open(os.path.join(os.path.expanduser('~'), '.gnupg/gpg.conf'), 'a') as fh:
+gpgdir = mkdirp(os.path.expanduser('~'), '.gnupg')
+
+with open(os.path.join(gpgdir, 'gpg.conf'), 'a') as fh:
     fh.writelines([
         'no-use-agent\n',
         'pinentry-mode loopback\n'
     ])
-    
+
 run_command('curl -SlL {} | gpg --batch --import'.format(os.environ['SIGN_URI']), echo=False, quiet=True, shell=True)
 
 clean(build_dir)
