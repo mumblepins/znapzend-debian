@@ -114,14 +114,15 @@ def run_command(*args, **kwargs):
             sys.stderr.write(ln)
 
 
-def mkdirp(directory, perms=0o0700):
+def mkdirp(directory, perms=0o0700, chmod=True):
     d = os.path.abspath(directory)
     try:
         os.makedirs(d, perms)
     except OSError as e:
         if e.errno == 17:  # Directory exists
-            os.chown(d, os.getuid(), os.getgid())
-            os.chmod(d, perms)
+            if chmod:
+                os.chown(d, os.getuid(), os.getgid())
+                os.chmod(d, perms)
         else:
             raise
     return d
@@ -157,7 +158,7 @@ def sed_file(regex_find, regex_sub, filename):
 
 mkdirp(savedir)
 
-gpgdir = mkdirp(os.path.expanduser('~'), '.gnupg')
+gpgdir = mkdirp(os.path.join(os.path.expanduser('~'), '.gnupg'), chmod=False)
 
 with open(os.path.join(gpgdir, 'gpg.conf'), 'a') as fh:
     fh.writelines([
