@@ -86,6 +86,8 @@ def run_command_iter(string, echo=True, quiet=False, dry_run=False, colored=True
     for _ in range(2):
         for source, line, name in iter(q.get, None):
             if not quiet:
+                if 'passphrase' in line:
+                    line = 'PASSPHRASE NOT HERE'
                 if name == 'stdout':
                     yield 'stdout', line
                 else:
@@ -100,7 +102,7 @@ def run_command_iter(string, echo=True, quiet=False, dry_run=False, colored=True
 def run_command_check_output(*args, **kwargs):
     # kwargs['quiet'] = False
     # rci = run_command_iter(*args, **kwargs)
-    outlist =[v.rstrip('\n') for  t, v in run_command_iter(*args, **kwargs) if t=='stdout']
+    outlist = [v.rstrip('\n') for t, v in run_command_iter(*args, **kwargs) if t == 'stdout']
     return '\n'.join(outlist)
 
 
@@ -155,11 +157,16 @@ def sed_file(regex_find, regex_sub, filename):
 
 mkdirp(savedir)
 
-run_command('curl -SlL {} | gpg --import'.format(os.environ['SIGN_URI']), echo=False, quiet=True, shell=True)
+with open(os.path.join(os.path.expanduser('~'), '.gnupg/gpg.conf'), 'a') as fh:
+    fh.writelines([
+        'no-use-agent\n',
+        'pinentry-mode loopback\n'
+    ])
+    
+run_command('curl -SlL {} | gpg --batch --import'.format(os.environ['SIGN_URI']), echo=False, quiet=True, shell=True)
 
 clean(build_dir)
 build_dir = mkdirp(build_dir)
-
 
 with cd(build_dir) as (prevdir, curdir):
     zz_dir = clone_and_checkout(ZZ_URL)
