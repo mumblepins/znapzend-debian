@@ -1,18 +1,53 @@
-defaults: &defaults
-  working_directory: /tmp/build
-#  parallelism: 4
-  docker:
-    - image: mumblepins/circleci-dev:xenial-debuild
+default-steps: &default-steps
+  - run:
+      name: Build
+      command: |
+        ./make-znapzend.py
+  - store_artifacts:
+      path: worksavedir
 
 version: 2
 jobs:
-  build:
-    <<: *defaults
+  build-current:
+    working_directory: /tmp/build
+    docker:
+      - image: mumblepins/circleci-dev:ubuntu-debuild
     steps:
       - checkout
+      - run:
+          name: GPG setup
+          command: |
+            mkdir -p ~/.gnupg
+            echo  "pinentry-mode loopback" > ~/.gnupg/gpg.conf
       - run:
           name: Build
           command: |
             ./make-znapzend.py
       - store_artifacts:
           path: worksavedir
+
+  build-lts:
+      working_directory: /tmp/build
+      docker:
+        - image: mumblepins/circleci-dev:ubuntu-LTS-debuild
+      steps:
+          - checkout
+          - run:
+              name: GPG setup
+              command: |
+                mkdir -p ~/.gnupg
+                echo  "no-use-agent" > ~/.gnupg/gpg.conf
+          - run:
+              name: Build
+              command: |
+                ./make-znapzend.py
+          - store_artifacts:
+              path: worksavedir
+
+
+workflows:
+  version: 2
+  build-all:
+    jobs:
+      - build-lts
+      - build-current
